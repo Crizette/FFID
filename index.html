@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análise de Carteira — Churn & Upsell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0D1117;
+    --bg2: #161B22;
+    --bg3: #1C2330;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #E6EDF3;
+    --muted: #8B949E;
+    --dimmed: #484F58;
+    --indigo: #4F6EF7;
+    --indigo-dim: rgba(79,110,247,0.15);
+    --red: #EF4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --amber: #F59E0B;
+    --amber-dim: rgba(245,158,11,0.12);
+    --green: #22C55E;
+    --green-dim: rgba(34,197,94,0.12);
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,17,23,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .nav-logo {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+  .nav-links a {
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-date {
+    font-size: 12px;
+    color: var(--dimmed);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* LAYOUT */
+  .wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  section { padding: 5rem 0; }
+
+  /* HERO */
+  .hero {
+    padding: 6rem 0 4rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--indigo);
+    margin-bottom: 1.25rem;
+  }
+  .hero-title {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 1.25rem;
+    max-width: 720px;
+  }
+  .hero-title span { color: var(--indigo); }
+  .hero-subtitle {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 540px;
+    margin-bottom: 3rem;
+    line-height: 1.7;
+  }
+
+  /* HEALTH BAR */
+  .health-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--dimmed);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .health-bar {
+    display: flex;
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    gap: 2px;
+    max-width: 640px;
+    margin-bottom: 10px;
+  }
+  .hb-seg {
+    border-radius: 2px;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+  .hb-seg:hover { opacity: 0.7; }
+  .health-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .hl-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .hl-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 3.5rem;
+  }
+  .kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.k-red::before { background: var(--red); }
+  .kpi-card.k-amber::before { background: var(--amber); }
+  .kpi-card.k-green::before { background: var(--green); }
+  .kpi-card.k-indigo::before { background: var(--indigo); }
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dimmed);
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.5rem;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .kpi-card.k-red .kpi-value { color: var(--red); }
+  .kpi-card.k-amber .kpi-value { color: var(--amber); }
+  .kpi-card.k-green .kpi-value { color: var(--green); }
+  .kpi-card.k-indigo .kpi-value { color: var(--indigo); }
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--dimmed);
+  }
+
+  /* SECTION HEADING */
+  .sec-head {
+    margin-bottom: 2.5rem;
+  }
+  .sec-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--indigo);
+    margin-bottom: 8px;
+  }
+  .sec-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .sec-desc {
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 540px;
+  }
+
+  /* RISK CARDS */
+  .risk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .risk-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .risk-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+  }
+  .risk-card.urgent {
+    border-color: rgba(239,68,68,0.3);
+    background: linear-gradient(135deg, var(--bg2) 0%, rgba(239,68,68,0.04) 100%);
+  }
+  .risk-card.moderate {
+    border-color: rgba(245,158,11,0.25);
+    background: linear-gradient(135deg, var(--bg2) 0%, rgba(245,158,11,0.04) 100%);
+  }
+  .rc-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .rc-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .rc-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-red { background: var(--red-dim); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.25); }
+  .badge-amber { background: var(--amber-dim); color: #FCD34D; border: 1px solid rgba(245,158,11,0.25); }
+  .badge-green { background: var(--green-dim); color: #86EFAC; border: 1px solid rgba(34,197,94,0.2); }
+  .badge-indigo { background: var(--indigo-dim); color: #A5B4FC; border: 1px solid rgba(79,110,247,0.25); }
+  .badge-gray { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+  .rc-problem {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 8px;
+  }
+  .rc-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-top: 8px;
+    background: var(--bg3);
+    color: var(--dimmed);
+    margin-right: 4px;
+  }
+
+  /* FULL TABLE */
+  .table-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Inter', sans-serif;
+  }
+  .filter-btn:hover { border-color: var(--border2); color: var(--text); }
+  .filter-btn.active { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+
+  .data-table-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table thead tr {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dimmed);
+  }
+  .data-table td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--text);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr { transition: background 0.15s; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .data-table tr.hidden { display: none; }
+  .client-name-cell { font-weight: 500; }
+  .problem-cell { color: var(--muted); font-size: 12px; max-width: 280px; }
+  .sat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .sat-red { background: var(--red-dim); color: #FCA5A5; }
+  .sat-amber { background: var(--amber-dim); color: #FCD34D; }
+  .sat-green { background: var(--green-dim); color: #86EFAC; }
+
+  /* UPSELL */
+  .upsell-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .upsell-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+  .upsell-card:hover { border-color: rgba(79,110,247,0.35); }
+  .upsell-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--indigo-dim);
+    border: 1px solid rgba(79,110,247,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+  .upsell-body {}
+  .upsell-client { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .upsell-desc { font-size: 13px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+  .upsell-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .utag {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* SATISFEITOS */
+  .satisfied-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .sat-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    transition: border-color 0.2s;
+  }
+  .sat-chip:hover { border-color: rgba(34,197,94,0.3); }
+  .sat-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .sat-chip-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .sat-chip-label { font-size: 11px; color: var(--muted); }
+
+  /* ALERT */
+  .alert-box {
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 2rem;
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+  }
+  .alert-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .alert-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #FCA5A5;
+    margin-bottom: 6px;
+  }
+  .alert-body {
+    font-size: 14px;
+    color: #FDA4A4;
+    opacity: 0.75;
+    line-height: 1.65;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0;
+    margin-top: 2rem;
+  }
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-text { font-size: 12px; color: var(--dimmed); }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); }
+
+  /* SCROLL REVEAL */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .risk-grid { grid-template-columns: 1fr; }
+    .upsell-grid { grid-template-columns: 1fr; }
+    nav .nav-links { display: none; }
+    .hero-title { font-size: 2rem; }
+    .wrapper { padding: 0 1.25rem; }
+    section { padding: 3.5rem 0; }
+  }
+
+  @media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .kpi-value { font-size: 2rem; }
+  }
+
+  /* COMMENTS */
+  .comment-form-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .comment-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .comment-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .comment-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dimmed);
+  }
+  .comment-input,
+  .comment-select,
+  .comment-textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 10px 13px;
+    transition: border-color 0.2s;
+    outline: none;
+    width: 100%;
+  }
+  .comment-input:focus,
+  .comment-select:focus,
+  .comment-textarea:focus {
+    border-color: var(--indigo);
+  }
+  .comment-input::placeholder,
+  .comment-textarea::placeholder { color: var(--dimmed); }
+  .comment-select option { background: #1C2330; }
+  .comment-textarea {
+    resize: vertical;
+    min-height: 90px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .comment-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .comment-char {
+    font-size: 11px;
+    color: var(--dimmed);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .comment-btn {
+    background: var(--indigo);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 22px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .comment-btn:hover { opacity: 0.88; }
+  .comment-btn:active { transform: scale(0.97); }
+  .comment-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Comment list */
+  .comments-list { display: flex; flex-direction: column; gap: 12px; }
+  .comment-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    transition: border-color 0.2s;
+    animation: fadeUp 0.35s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .comment-item:hover { border-color: var(--border2); }
+  .comment-item-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .comment-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--indigo-dim);
+    border: 1px solid rgba(79,110,247,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #A5B4FC;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+  .comment-meta { flex: 1; }
+  .comment-author { font-size: 13px; font-weight: 600; color: var(--text); }
+  .comment-time {
+    font-size: 11px;
+    color: var(--dimmed);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .comment-client-tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--indigo-dim);
+    color: #A5B4FC;
+    border: 1px solid rgba(79,110,247,0.2);
+    letter-spacing: 0.04em;
+  }
+  .comment-text {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .comment-delete {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: none;
+    color: var(--dimmed);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+    line-height: 1;
+  }
+  .comment-delete:hover { color: var(--red); background: var(--red-dim); }
+
+  .comments-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--dimmed);
+    font-size: 14px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+  }
+  .comments-empty span { display: block; font-size: 2rem; margin-bottom: 8px; }
+
+  .comments-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .comments-count {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .comments-count strong { color: var(--text); }
+  .clear-all-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dimmed);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .clear-all-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+  @media (max-width: 600px) {
+    .comment-form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">CS Report</span>
+  <ul class="nav-links">
+    <li><a href="#risco">Risco alto</a></li>
+    <li><a href="#carteira">Carteira</a></li>
+    <li><a href="#upsell">Upsell</a></li>
+    <li><a href="#satisfeitos">Satisfeitos</a></li>
+    <li><a href="#comentarios">Comentários</a></li>
+  </ul>
+  <span class="nav-date" id="nav-date"></span>
+</nav>
+
+<!-- HERO -->
+<div class="wrapper">
+  <section class="hero">
+    <p class="hero-eyebrow">Customer Success · Análise de Carteira</p>
+    <h1 class="hero-title">Saúde da carteira:<br><span>19 clientes</span> sob análise</h1>
+    <p class="hero-subtitle">Panorama completo de churn, satisfação e oportunidades de expansão. O principal fator de risco continua sendo a combinação de instabilidades recentes com falta de previsibilidade nas entregas.</p>
+
+    <p class="health-label">Saúde geral da carteira — um segmento por cliente</p>
+    <div class="health-bar" id="healthBar"></div>
+    <div class="health-legend">
+      <div class="hl-item"><span class="hl-dot" style="background:var(--green)"></span>Satisfeito (5)</div>
+      <div class="hl-item"><span class="hl-dot" style="background:var(--amber)"></span>Indiferente (6)</div>
+      <div class="hl-item"><span class="hl-dot" style="background:var(--red)"></span>Insatisfeito (8)</div>
+    </div>
+
+    <div class="kpi-grid reveal">
+      <div class="kpi-card k-red">
+        <p class="kpi-label">Risco alto</p>
+        <p class="kpi-value">5</p>
+        <p class="kpi-sub">clientes em alerta máximo</p>
+      </div>
+      <div class="kpi-card k-amber">
+        <p class="kpi-label">Insatisfeitos</p>
+        <p class="kpi-value">8</p>
+        <p class="kpi-sub">requerem ação imediata</p>
+      </div>
+      <div class="kpi-card k-green">
+        <p class="kpi-label">Satisfeitos</p>
+        <p class="kpi-value">5</p>
+        <p class="kpi-sub">base estável e confiante</p>
+      </div>
+      <div class="kpi-card k-indigo">
+        <p class="kpi-label">Oportunidades</p>
+        <p class="kpi-value">4</p>
+        <p class="kpi-sub">potencial de upsell ativo</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RISCO ALTO -->
+  <section id="risco">
+    <div class="sec-head reveal">
+      <p class="sec-eyebrow">Atenção imediata</p>
+      <h2 class="sec-title">Clientes com risco alto</h2>
+      <p class="sec-desc">Clientes que demandam ação prioritária pelo CS — risco elevado de churn ou cancelamento já em curso.</p>
+    </div>
+
+    <div class="risk-grid">
+      <div class="risk-card urgent reveal">
+        <div class="rc-top">
+          <span class="rc-name">Swiss</span>
+          <div class="rc-badges">
+            <span class="badge badge-red">Risco alto</span>
+            <span class="badge badge-red">🔴 Bem insatisfeito</span>
+          </div>
+        </div>
+        <p class="rc-problem">Processo de cancelamento praticamente concluído. Permanecem apenas pendências financeiras do encerramento contratual. Relacionamento severamente prejudicado por bugs e problemas operacionais acumulados.</p>
+        <span class="rc-tag">Perdido</span>
+      </div>
+
+      <div class="risk-card urgent reveal">
+        <div class="rc-top">
+          <span class="rc-name">Cury Cobrança</span>
+          <div class="rc-badges">
+            <span class="badge badge-red">Risco alto</span>
+            <span class="badge badge-red">🔴 Insatisfeito</span>
+          </div>
+        </div>
+        <p class="rc-problem">Falhas de visualização que dificultam o atendimento. Suporte atuando com treinamentos para migrar processos. Problemas no envio de ativos e gestão de conversas.</p>
+        <span class="rc-tag">Suporte ativo</span>
+      </div>
+
+      <div class="risk-card urgent reveal">
+        <div class="rc-top">
+          <span class="rc-name">Think</span>
+          <div class="rc-badges">
+            <span class="badge badge-red">Risco alto</span>
+            <span class="badge badge-red">🔴 Insatisfeito</span>
+          </div>
+        </div>
+        <p class="rc-problem">Plataforma sem uso há bastante tempo. Dificuldades de integração e comunicação com sistemas terceiros prejudicaram a adoção e a percepção de valor do produto.</p>
+        <span class="rc-tag">Sem uso</span>
+        <span class="rc-tag">Integração</span>
+      </div>
+
+      <div class="risk-card urgent reveal">
+        <div class="rc-top">
+          <span class="rc-name">Hugo Engenharia</span>
+          <div class="rc-badges">
+            <span class="badge badge-red">Risco alto</span>
+            <span class="badge badge-amber">🟡 Indiferente</span>
+          </div>
+        </div>
+        <p class="rc-problem">Uso da plataforma interrompido por mudanças estratégicas internas. Risco elevado mais relacionado ao encerramento gradual da operação da empresa do que ao produto em si.</p>
+        <span class="rc-tag">Estratégico</span>
+      </div>
+
+      <div class="risk-card urgent reveal">
+        <div class="rc-top">
+          <span class="rc-name">INX</span>
+          <div class="rc-badges">
+            <span class="badge badge-red">Risco alto</span>
+            <span class="badge badge-amber">🟡 Indiferente</span>
+          </div>
+        </div>
+        <p class="rc-problem">Baixa utilização e pouca dependência operacional do FFID. Sem sinais de engajamento ou intenção de expansão. Cliente vulnerável a mudanças de plataforma.</p>
+        <span class="rc-tag">Baixo engajamento</span>
+      </div>
+
+      <div class="risk-card moderate reveal">
+        <div class="rc-top">
+          <span class="rc-name">CF Construtora</span>
+          <div class="rc-badges">
+            <span class="badge badge-amber">Médio/Alto</span>
+            <span class="badge badge-red">🔴 Insatisfeito</span>
+          </div>
+        </div>
+        <p class="rc-problem">Limitações do CRM do cliente (CV) inicialmente atribuídas ao FFID. Desgaste no processo de implantação e intermitências recentes geraram insegurança na continuidade do projeto.</p>
+        <span class="rc-tag">Implantação</span>
+        <span class="rc-tag">Intermitências</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- CARTEIRA COMPLETA -->
+  <section id="carteira">
+    <div class="sec-head reveal">
+      <p class="sec-eyebrow">Visão geral</p>
+      <h2 class="sec-title">Carteira completa</h2>
+      <p class="sec-desc">Todos os 19 clientes com risco, satisfação e principal ponto de atenção. Use os filtros para navegar.</p>
+    </div>
+
+    <div class="table-controls reveal">
+      <button class="filter-btn active" onclick="filterTable('all', this)">Todos (19)</button>
+      <button class="filter-btn" onclick="filterTable('alto', this)">Risco alto</button>
+      <button class="filter-btn" onclick="filterTable('insatisfeito', this)">Insatisfeitos</button>
+      <button class="filter-btn" onclick="filterTable('satisfeito', this)">Satisfeitos</button>
+      <button class="filter-btn" onclick="filterTable('upsell', this)">Oportunidade</button>
+    </div>
+
+    <div class="data-table-wrap reveal">
+      <table class="data-table" id="mainTable">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Risco</th>
+            <th>Satisfação</th>
+            <th>Ponto principal</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-risk="alto" data-sat="insatisfeito" data-status="">
+            <td class="client-name-cell">Swiss</td>
+            <td><span class="badge badge-red">Alto</span></td>
+            <td><span class="sat-pill sat-red">🔴 Bem insatisfeito</span></td>
+            <td class="problem-cell">Cancelamento em curso, pendências financeiras</td>
+            <td><span class="badge badge-red">Perdido</span></td>
+          </tr>
+          <tr data-risk="alto" data-sat="insatisfeito" data-status="">
+            <td class="client-name-cell">Cury Cobrança</td>
+            <td><span class="badge badge-red">Alto</span></td>
+            <td><span class="sat-pill sat-red">🔴 Insatisfeito</span></td>
+            <td class="problem-cell">Falhas de visualização, envio de ativos</td>
+            <td><span class="badge badge-amber">Atenção</span></td>
+          </tr>
+          <tr data-risk="alto" data-sat="insatisfeito" data-status="">
+            <td class="client-name-cell">Think</td>
+            <td><span class="badge badge-red">Alto</span></td>
+            <td><span class="sat-pill sat-red">🔴 Insatisfeito</span></td>
+            <td class="problem-cell">Sem uso da plataforma, integração falhou</td>
+            <td><span class="badge badge-amber">Atenção</span></td>
+          </tr>
+          <tr data-risk="alto" data-sat="indiferente" data-status="">
+            <td class="client-name-cell">Hugo Engenharia</td>
+            <td><span class="badge badge-red">Alto</span></td>
+            <td><span class="sat-pill sat-amber">🟡 Indiferente</span></td>
+            <td class="problem-cell">Encerramento gradual da operação da empresa</td>
+            <td><span class="badge badge-amber">Atenção</span></td>
+          </tr>
+          <tr data-risk="alto" data-sat="indiferente" data-status="">
+            <td class="client-name-cell">INX</td>
+            <td><span class="badge badge-red">Alto</span></td>
+            <td><span class="sat-pill sat-amber">🟡 Indiferente</span></td>
+            <td class="problem-cell">Baixo engajamento, pouca dependência operacional</td>
+            <td><span class="badge badge-amber">Atenção</span></td>
+          </tr>
+          <tr data-risk="medioalto" data-sat="insatisfeito" data-status="">
+            <td class="client-name-cell">CF Construtora</td>
+            <td><span class="badge badge-amber">Médio/Alto</span></td>
+            <td><span class="sat-pill sat-red">🔴 Insatisfeito</span></td>
+            <td class="problem-cell">Desgaste na implantação e intermitências</td>
+            <td><span class="badge badge-amber">Monitorar</span></td>
+          </tr>
+          <tr data-risk="baixomedio" data-sat="insatisfeito" data-status="">
+            <td class="client-name-cell">Cury Produção</td>
+            <td><span class="badge badge-amber">Baixo/Médio</span></td>
+            <td><span class="sat-pill sat-red">🔴 Bem insatisfeito</span></td>
+            <td class="problem-cell">Insatisfação com IA e automações, falta de visibilidade</td>
+            <td><span class="badge badge-amber">Monitorar</span></td>
+          </tr>
+          <tr data-risk="medio" data-sat="insatisfeito" data-status="">
+            <td class="client-name-cell">Kaslik</td>
+            <td><span class="badge badge-amber">Médio</span></td>
+            <td><span class="sat-pill sat-red">🔴 Insatisfeito</span></td>
+            <td class="problem-cell">Sem previsibilidade nas entregas, já tentou cancelar</td>
+            <td><span class="badge badge-amber">Monitorar</span></td>
+          </tr>
+          <tr data-risk="medio" data-sat="insatisfeito" data-status="">
+            <td class="client-name-cell">Patrimóvel</td>
+            <td><span class="badge badge-amber">Médio</span></td>
+            <td><span class="sat-pill sat-red">🔴 Insatisfeito</span></td>
+            <td class="problem-cell">Atrasos na implantação de IA, instabilidades</td>
+            <td><span class="badge badge-amber">Monitorar</span></td>
+          </tr>
+          <tr data-risk="baixo" data-sat="insatisfeito" data-status="upsell">
+            <td class="client-name-cell">Eztec</td>
+            <td><span class="badge badge-green">Baixo</span></td>
+            <td><span class="sat-pill sat-red">🔴 Insatisfeito</span></td>
+            <td class="problem-cell">IA com instabilidades, relacionamento positivo</td>
+            <td><span class="badge badge-indigo">Upsell</span></td>
+          </tr>
+          <tr data-risk="medio" data-sat="indiferente" data-status="">
+            <td class="client-name-cell">Lote 5</td>
+            <td><span class="badge badge-amber">Médio</span></td>
+            <td><span class="sat-pill sat-amber">🟡 Indiferente</span></td>
+            <td class="problem-cell">Atraso na distribuição de leads, utilização limitada</td>
+            <td><span class="badge badge-gray">Monitorar</span></td>
+          </tr>
+          <tr data-risk="baixomedio" data-sat="indiferente" data-status="">
+            <td class="client-name-cell">Máximo Aldana</td>
+            <td><span class="badge badge-amber">Baixo/Médio</span></td>
+            <td><span class="sat-pill sat-amber">🟡 Indiferente</span></td>
+            <td class="problem-cell">Uso concentrado em poucos recursos e usuários</td>
+            <td><span class="badge badge-gray">Estável</span></td>
+          </tr>
+          <tr data-risk="baixomedio" data-sat="indiferente" data-status="">
+            <td class="client-name-cell">Amistá</td>
+            <td><span class="badge badge-amber">Baixo/Médio</span></td>
+            <td><span class="sat-pill sat-amber">🟡 Indiferente</span></td>
+            <td class="problem-cell">Pouco entendimento de CRM, percepção de valor limitada</td>
+            <td><span class="badge badge-gray">Estável</span></td>
+          </tr>
+          <tr data-risk="baixo" data-sat="indiferente" data-status="">
+            <td class="client-name-cell">Trisul</td>
+            <td><span class="badge badge-green">Baixo</span></td>
+            <td><span class="sat-pill sat-amber">🟡 Indiferente</span></td>
+            <td class="problem-cell">Alta dependência, impactado por instabilidades da IA</td>
+            <td><span class="badge badge-gray">Estável</span></td>
+          </tr>
+          <tr data-risk="baixo" data-sat="satisfeito" data-status="upsell">
+            <td class="client-name-cell">Yuny</td>
+            <td><span class="badge badge-green">Baixo</span></td>
+            <td><span class="sat-pill sat-green">🟢 Satisfeito</span></td>
+            <td class="problem-cell">Tagueamento como fragilidade; expansão em vista</td>
+            <td><span class="badge badge-indigo">Upsell</span></td>
+          </tr>
+          <tr data-risk="baixo" data-sat="satisfeito" data-status="">
+            <td class="client-name-cell">MIP</td>
+            <td><span class="badge badge-green">Baixo</span></td>
+            <td><span class="sat-pill sat-green">🟢 Satisfeito</span></td>
+            <td class="problem-cell">Implantação sem ocorrências críticas, percepção positiva</td>
+            <td><span class="badge badge-gray">Estável</span></td>
+          </tr>
+          <tr data-risk="baixo" data-sat="satisfeito" data-status="upsell">
+            <td class="client-name-cell">One</td>
+            <td><span class="badge badge-green">Baixo</span></td>
+            <td><span class="sat-pill sat-green">🟢 Satisfeito</span></td>
+            <td class="problem-cell">Piloto de IA aprovado, boa receptividade</td>
+            <td><span class="badge badge-indigo">Upsell</span></td>
+          </tr>
+          <tr data-risk="baixo" data-sat="satisfeito" data-status="upsell">
+            <td class="client-name-cell">Cidadania Lusoitaliana</td>
+            <td><span class="badge badge-green">Baixo</span></td>
+            <td><span class="sat-pill sat-green">🟢 Satisfeito</span></td>
+            <td class="problem-cell">FFID como CRM principal; interesse em expansão tech</td>
+            <td><span class="badge badge-indigo">Upsell</span></td>
+          </tr>
+          <tr data-risk="baixo" data-sat="satisfeito" data-status="">
+            <td class="client-name-cell">Shpaisman</td>
+            <td><span class="badge badge-green">Baixo</span></td>
+            <td><span class="sat-pill sat-green">🟢 Bem satisfeito</span></td>
+            <td class="problem-cell">Problemas resolvidos por CS + IA, plataforma estável</td>
+            <td><span class="badge badge-green">Saudável</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- UPSELL -->
+  <section id="upsell">
+    <div class="sec-head reveal">
+      <p class="sec-eyebrow">Crescimento</p>
+      <h2 class="sec-title">Oportunidades de upsell</h2>
+      <p class="sec-desc">Clientes com potencial concreto de expansão e iniciativas já em andamento.</p>
+    </div>
+
+    <div class="upsell-grid">
+      <div class="upsell-card reveal">
+        <div class="upsell-icon">🤖</div>
+        <div class="upsell-body">
+          <p class="upsell-client">Yuny</p>
+          <p class="upsell-desc">Acompanhamento próximo fortaleceu o relacionamento. Oportunidades concretas de expansão com centralização de leads, automações e IA.</p>
+          <div class="upsell-tags">
+            <span class="utag">IA</span>
+            <span class="utag">Automações</span>
+            <span class="utag">Centralização de leads</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="upsell-card reveal">
+        <div class="upsell-icon">🚀</div>
+        <div class="upsell-body">
+          <p class="upsell-client">One</p>
+          <p class="upsell-desc">Cliente satisfeito com feedback positivo sobre o relacionamento. Projeto piloto de IA e automações já aprovado pela operação.</p>
+          <div class="upsell-tags">
+            <span class="utag">Piloto IA aprovado</span>
+            <span class="utag">Automações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="upsell-card reveal">
+        <div class="upsell-icon">🏛️</div>
+        <div class="upsell-body">
+          <p class="upsell-client">Cidadania Lusoitaliana</p>
+          <p class="upsell-desc">Cliente antigo com forte dependência do FFID como CRM principal. Interesse claro em fortalecer a área de tecnologia da empresa.</p>
+          <div class="upsell-tags">
+            <span class="utag">Expansão tech</span>
+            <span class="utag">CRM principal</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="upsell-card reveal">
+        <div class="upsell-icon">📈</div>
+        <div class="upsell-body">
+          <p class="upsell-client">Eztec</p>
+          <p class="upsell-desc">Apesar da insatisfação com IA, o relacionamento é positivo. Projetos estratégicos podem aumentar a dependência operacional da plataforma.</p>
+          <div class="upsell-tags">
+            <span class="utag">Projetos estratégicos</span>
+            <span class="utag">Relevância operacional</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SATISFEITOS -->
+  <section id="satisfeitos">
+    <div class="sec-head reveal">
+      <p class="sec-eyebrow">Base saudável</p>
+      <h2 class="sec-title">Clientes satisfeitos</h2>
+      <p class="sec-desc">Base estável que representa a melhor referência de relacionamento e produto bem executado.</p>
+    </div>
+
+    <div class="satisfied-row reveal">
+      <div class="sat-chip">
+        <span class="sat-chip-dot"></span>
+        <div>
+          <p class="sat-chip-name">Shpaisman</p>
+          <p class="sat-chip-label">🟢 Bem satisfeito</p>
+        </div>
+      </div>
+      <div class="sat-chip">
+        <span class="sat-chip-dot"></span>
+        <div>
+          <p class="sat-chip-name">Yuny</p>
+          <p class="sat-chip-label">🟢 Satisfeito · Upsell</p>
+        </div>
+      </div>
+      <div class="sat-chip">
+        <span class="sat-chip-dot"></span>
+        <div>
+          <p class="sat-chip-name">One</p>
+          <p class="sat-chip-label">🟢 Satisfeito · Upsell</p>
+        </div>
+      </div>
+      <div class="sat-chip">
+        <span class="sat-chip-dot"></span>
+        <div>
+          <p class="sat-chip-name">MIP</p>
+          <p class="sat-chip-label">🟢 Satisfeito</p>
+        </div>
+      </div>
+      <div class="sat-chip">
+        <span class="sat-chip-dot"></span>
+        <div>
+          <p class="sat-chip-name">Cidadania Lusoitaliana</p>
+          <p class="sat-chip-label">🟢 Satisfeito · Upsell</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ALERTA FINAL -->
+  <section>
+    <div class="sec-head reveal">
+      <p class="sec-eyebrow">Resumo executivo</p>
+      <h2 class="sec-title">Principal fator de risco</h2>
+    </div>
+    <div class="alert-box reveal">
+      <span class="alert-icon">⚠️</span>
+      <div>
+        <p class="alert-title">Instabilidades + falta de previsibilidade nas entregas</p>
+        <p class="alert-body">A combinação de instabilidades recentes da plataforma — especialmente da IA —, ausência de prazos claros e falta de visibilidade sobre demandas abertas é o principal vetor de churn na carteira. Por outro lado, os clientes com maior proximidade operacional e projetos ativos de expansão continuam apresentando as melhores oportunidades de retenção e crescimento.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+  <hr class="divider">
+
+  <!-- COMENTÁRIOS -->
+  <section id="comentarios">
+    <div class="sec-head reveal">
+      <p class="sec-eyebrow">Discussão interna</p>
+      <h2 class="sec-title">Comentários</h2>
+      <p class="sec-desc">Registre observações, atualizações e decisões sobre a carteira. Os comentários ficam salvos em nuvem e são visíveis para todos que acessarem esta página.</p>
+    </div>
+
+    <!-- FORM -->
+    <div class="comment-form-wrap reveal">
+      <div class="comment-form-row">
+        <div class="comment-input-group">
+          <label class="comment-label" for="c-author">Seu nome</label>
+          <input class="comment-input" id="c-author" type="text" placeholder="Ex: Ana Paula" maxlength="60">
+        </div>
+        <div class="comment-input-group">
+          <label class="comment-label" for="c-client">Cliente relacionado</label>
+          <select class="comment-select" id="c-client">
+            <option value="">— Geral / Carteira —</option>
+            <option>Cury Produção</option>
+            <option>Cury Cobrança</option>
+            <option>Yuny</option>
+            <option>Eztec</option>
+            <option>Lote 5</option>
+            <option>MIP</option>
+            <option>Kaslik</option>
+            <option>INX</option>
+            <option>One</option>
+            <option>Swiss</option>
+            <option>Think</option>
+            <option>Cidadania Lusoitaliana</option>
+            <option>Máximo Aldana</option>
+            <option>Amistá</option>
+            <option>CF Construtora</option>
+            <option>Hugo Engenharia</option>
+            <option>Patrimóvel</option>
+            <option>Shpaisman</option>
+            <option>Trisul</option>
+          </select>
+        </div>
+      </div>
+      <textarea class="comment-textarea" id="c-text" placeholder="Escreva seu comentário, atualização ou decisão..." maxlength="1000"></textarea>
+      <div class="comment-form-footer">
+        <span class="comment-char"><span id="c-char">0</span> / 1000</span>
+        <button class="comment-btn" id="c-submit" onclick="submitComment()">Registrar comentário</button>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <div class="comments-bar reveal">
+      <p class="comments-count"><strong id="c-count">0</strong> comentário(s) registrado(s)</p>
+      <button class="clear-all-btn" onclick="clearAllComments()">Limpar todos</button>
+    </div>
+    <div class="comments-list reveal" id="commentsList"></div>
+  </section>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrapper">
+    <div class="footer-inner">
+      <p class="footer-text">CS Report — Análise de Carteira</p>
+      <p class="footer-text" id="footer-date"></p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Date
+  const now = new Date();
+  const opts = { day: '2-digit', month: 'long', year: 'numeric' };
+  const formatted = now.toLocaleDateString('pt-BR', opts);
+  document.getElementById('nav-date').textContent = formatted;
+  document.getElementById('footer-date').textContent = formatted;
+
+  // Health bar
+  const bar = document.getElementById('healthBar');
+  const clients = [
+    { color: '#EF4444' }, // Swiss
+    { color: '#EF4444' }, // Cury Cobrança
+    { color: '#EF4444' }, // Think
+    { color: '#F59E0B' }, // Hugo
+    { color: '#F59E0B' }, // INX
+    { color: '#EF4444' }, // CF Construtora
+    { color: '#EF4444' }, // Cury Produção
+    { color: '#EF4444' }, // Kaslik
+    { color: '#EF4444' }, // Patrimóvel
+    { color: '#EF4444' }, // Eztec
+    { color: '#F59E0B' }, // Lote 5
+    { color: '#F59E0B' }, // Máximo Aldana
+    { color: '#F59E0B' }, // Amistá
+    { color: '#F59E0B' }, // Trisul
+    { color: '#22C55E' }, // Yuny
+    { color: '#22C55E' }, // MIP
+    { color: '#22C55E' }, // One
+    { color: '#22C55E' }, // Cidadania
+    { color: '#22C55E' }, // Shpaisman
+  ];
+  clients.forEach((c, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'hb-seg';
+    seg.style.cssText = `flex: 1; background: ${c.color}; opacity: 0.85;`;
+    bar.appendChild(seg);
+  });
+
+  // Filter table
+  function filterTable(filter, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const rows = document.querySelectorAll('#mainTable tbody tr');
+    rows.forEach(row => {
+      const risk = row.dataset.risk;
+      const sat = row.dataset.sat;
+      const status = row.dataset.status;
+      if (filter === 'all') { row.classList.remove('hidden'); return; }
+      if (filter === 'alto' && risk === 'alto') { row.classList.remove('hidden'); return; }
+      if (filter === 'insatisfeito' && sat === 'insatisfeito') { row.classList.remove('hidden'); return; }
+      if (filter === 'satisfeito' && sat === 'satisfeito') { row.classList.remove('hidden'); return; }
+      if (filter === 'upsell' && status === 'upsell') { row.classList.remove('hidden'); return; }
+      row.classList.add('hidden');
+    });
+  }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ── SUPABASE CONFIG ───────────────────────────────────
+  const SB_URL = 'https://osezvncticxwgaksouqp.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zZXp2bmN0aWN4d2dha3NvdXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1OTQ3MTcsImV4cCI6MjA5NzE3MDcxN30.Hk3TjCW0Xh92Akzkz6BFoe7SGuKfnNJ1GbQziXl7w7o';
+  const HEADERS = {
+    'Content-Type': 'application/json',
+    'apikey': SB_KEY,
+    'Authorization': `Bearer ${SB_KEY}`,
+    'Prefer': 'return=representation'
+  };
+
+  // ── HELPERS ───────────────────────────────────────────
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function initials(name) {
+    return name.trim().split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      + ' · ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById('c-submit');
+    btn.disabled = on;
+    btn.textContent = on ? 'Enviando...' : 'Registrar comentário';
+  }
+
+  function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = `
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: ${type === 'error' ? '#3B1212' : '#0F2A1A'};
+      border: 1px solid ${type === 'error' ? 'rgba(239,68,68,0.4)' : 'rgba(34,197,94,0.35)'};
+      color: ${type === 'error' ? '#FCA5A5' : '#86EFAC'};
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+      padding: 12px 20px; border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.25s, transform 0.25s;
+    `;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateY(0)'; });
+    setTimeout(() => {
+      t.style.opacity = '0'; t.style.transform = 'translateY(8px)';
+      setTimeout(() => t.remove(), 300);
+    }, 3000);
+  }
+
+  // ── RENDER ────────────────────────────────────────────
+  function renderComments(list) {
+    const container = document.getElementById('commentsList');
+    const countEl   = document.getElementById('c-count');
+    countEl.textContent = list.length;
+
+    if (list.length === 0) {
+      container.innerHTML = '<div class="comments-empty"><span>💬</span>Nenhum comentário ainda. Seja o primeiro a registrar!</div>';
+      return;
+    }
+
+    // Supabase columns: id, nome, comentario, data_criacao, cliente (optional)
+    container.innerHTML = list.map(c => `
+      <div class="comment-item" id="comment-${c.id}">
+        <button class="comment-delete" onclick="deleteComment('${c.id}')" title="Excluir comentário">✕</button>
+        <div class="comment-item-top">
+          <div class="comment-avatar">${initials(c.nome)}</div>
+          <div class="comment-meta">
+            <p class="comment-author">${escHtml(c.nome)}</p>
+            <p class="comment-time">${formatDate(c.data_criacao)}</p>
+          </div>
+          ${c.cliente ? `<span class="comment-client-tag">${escHtml(c.cliente)}</span>` : ''}
+        </div>
+        <p class="comment-text">${escHtml(c.comentario).replace(/\n/g, '<br>')}</p>
+      </div>
+    `).join('');
+  }
+
+  // ── FETCH (load from Supabase) ────────────────────────
+  async function fetchComments() {
+    const container = document.getElementById('commentsList');
+    container.innerHTML = '<div class="comments-empty"><span style="font-size:1.5rem">⏳</span>Carregando comentários...</div>';
+
+    try {
+      const res = await fetch(
+        `${SB_URL}/rest/v1/comentarios?select=*&order=data_criacao.desc`,
+        { headers: HEADERS }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderComments(data);
+    } catch (err) {
+      container.innerHTML = '<div class="comments-empty"><span>⚠️</span>Não foi possível carregar os comentários. Verifique a conexão.</div>';
+      console.error('Supabase fetch error:', err);
+    }
+  }
+
+  // ── SUBMIT ────────────────────────────────────────────
+  async function submitComment() {
+    const nome      = document.getElementById('c-author').value.trim();
+    const cliente   = document.getElementById('c-client').value || null;
+    const comentario = document.getElementById('c-text').value.trim();
+
+    if (!nome)       { flashInput('c-author'); return; }
+    if (!comentario) { flashInput('c-text');   return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/comentarios`, {
+        method: 'POST',
+        headers: HEADERS,
+        body: JSON.stringify({ nome, cliente, comentario })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `HTTP ${res.status}`);
+      }
+
+      document.getElementById('c-text').value = '';
+      document.getElementById('c-char').textContent = '0';
+      showToast('Comentário registrado com sucesso!');
+      await fetchComments();
+
+      setTimeout(() => {
+        document.getElementById('commentsList').firstElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 150);
+
+    } catch (err) {
+      console.error('Supabase insert error:', err);
+      showToast('Erro ao salvar comentário. Tente novamente.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── DELETE ────────────────────────────────────────────
+  async function deleteComment(id) {
+    const el = document.getElementById('comment-' + id);
+    if (el) { el.style.opacity = '0.4'; el.style.pointerEvents = 'none'; }
+
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/comentarios?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: HEADERS
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('Comentário excluído.');
+      await fetchComments();
+    } catch (err) {
+      console.error('Supabase delete error:', err);
+      if (el) { el.style.opacity = '1'; el.style.pointerEvents = ''; }
+      showToast('Erro ao excluir. Tente novamente.', 'error');
+    }
+  }
+
+  // ── CLEAR ALL ─────────────────────────────────────────
+  async function clearAllComments() {
+    if (!confirm('Tem certeza que deseja apagar TODOS os comentários? Esta ação não pode ser desfeita.')) return;
+
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/comentarios?id=neq.00000000-0000-0000-0000-000000000000`, {
+        method: 'DELETE',
+        headers: HEADERS
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('Todos os comentários foram apagados.');
+      await fetchComments();
+    } catch (err) {
+      console.error('Supabase clear error:', err);
+      showToast('Erro ao limpar comentários.', 'error');
+    }
+  }
+
+  function flashInput(id) {
+    const el = document.getElementById(id);
+    el.style.borderColor = 'var(--red)';
+    el.focus();
+    setTimeout(() => { el.style.borderColor = ''; }, 1200);
+  }
+
+  // Char counter
+  document.getElementById('c-text').addEventListener('input', function() {
+    document.getElementById('c-char').textContent = this.value.length;
+  });
+
+  // Submit on Ctrl+Enter
+  document.getElementById('c-text').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submitComment();
+  });
+
+  // Init — load comments on page load
+  fetchComments();
+</script>
+</body>
+</html>
