@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Report — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0D1117;--bg2:#161B22;--bg3:#1C2330;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.18);
+  --text:#E6EDF3;--muted:#8B949E;--dimmed:#484F58;
+  --indigo:#4F6EF7;--indigo-dim:rgba(79,110,247,0.15);
+  --red:#EF4444;--red-dim:rgba(239,68,68,0.12);
+  --green:#22C55E;
+  --radius:10px;--radius-lg:14px;
+}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;}
+
+/* BG GRID */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(79,110,247,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(79,110,247,.04) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(79,110,247,.12),transparent);
+}
+
+.card{
+  position:relative;z-index:1;
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:var(--radius-lg);padding:2.5rem 2rem;
+  width:100%;max-width:400px;
+  box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+
+.logo{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:2rem;
+}
+.logo-mark{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--indigo);display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:#fff;letter-spacing:-.02em;
+  box-shadow:0 0 20px rgba(79,110,247,.4);
+}
+.logo-text{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.01em;}
+.logo-sub{font-size:11px;color:var(--dimmed);margin-top:1px;}
+
+h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.4rem;}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:2rem;line-height:1.5;}
+
+.field{margin-bottom:1rem;}
+.label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dimmed);display:block;margin-bottom:6px;}
+.input{
+  width:100%;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:14px;
+  padding:11px 14px;outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.input:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(79,110,247,.12);}
+.input::placeholder{color:var(--dimmed);}
+.input.error{border-color:var(--red);}
+
+.pass-wrap{position:relative;}
+.pass-wrap .input{padding-right:44px;}
+.show-pass{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--dimmed);cursor:pointer;
+  font-size:16px;padding:4px;line-height:1;transition:color .15s;
+}
+.show-pass:hover{color:var(--muted);}
+
+.btn{
+  width:100%;background:var(--indigo);border:none;color:#fff;
+  font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
+  padding:12px;border-radius:var(--radius);cursor:pointer;
+  transition:opacity .2s,transform .1s;margin-top:.5rem;
+  position:relative;overflow:hidden;
+}
+.btn:hover{opacity:.9;}
+.btn:active{transform:scale(.99);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-text{transition:opacity .2s;}
+.btn.loading .btn-text{opacity:0;}
+.spinner{
+  position:absolute;inset:0;display:none;
+  align-items:center;justify-content:center;
+}
+.btn.loading .spinner{display:flex;}
+.spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.error-msg{
+  background:var(--red-dim);border:1px solid rgba(239,68,68,.25);
+  border-radius:var(--radius);padding:10px 14px;
+  font-size:13px;color:#FCA5A5;margin-top:1rem;
+  display:none;align-items:center;gap:8px;
+}
+.error-msg.show{display:flex;}
+
+.footer-note{
+  text-align:center;margin-top:1.5rem;
+  font-size:12px;color:var(--dimmed);
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">CS</div>
+    <div>
+      <p class="logo-text">CS Report</p>
+      <p class="logo-sub">Customer Success · FFID</p>
+    </div>
+  </div>
+
+  <h1>Bem-vindo de volta</h1>
+  <p class="subtitle">Faça login para acessar o painel de análise de carteira.</p>
+
+  <div class="field">
+    <label class="label" for="email">E-mail</label>
+    <input class="input" id="email" type="email" placeholder="seu@email.com.br" autocomplete="email">
+  </div>
+
+  <div class="field">
+    <label class="label" for="senha">Senha</label>
+    <div class="pass-wrap">
+      <input class="input" id="senha" type="password" placeholder="••••••••" autocomplete="current-password">
+      <button class="show-pass" type="button" onclick="togglePass()" id="show-pass-btn" title="Mostrar senha">👁</button>
+    </div>
+  </div>
+
+  <div class="error-msg" id="error-msg">
+    <span>⚠️</span><span id="error-text">Credenciais inválidas.</span>
+  </div>
+
+  <button class="btn" id="login-btn" onclick="doLogin()">
+    <span class="btn-text">Entrar</span>
+    <div class="spinner"><div class="spin"></div></div>
+  </button>
+
+  <p class="footer-note">Não tem acesso? Solicite ao administrador.</p>
+</div>
+
+<script>
+const SB  = 'https://osezvncticxwgaksouqp.supabase.co';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zZXp2bmN0aWN4d2dha3NvdXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1OTQ3MTcsImV4cCI6MjA5NzE3MDcxN30.Hk3TjCW0Xh92Akzkz6BFoe7SGuKfnNJ1GbQziXl7w7o';
+
+function togglePass(){
+  const i=document.getElementById('senha');
+  i.type=i.type==='password'?'text':'password';
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+async function doLogin(){
+  const email=document.getElementById('email').value.trim();
+  const senha=document.getElementById('senha').value;
+  const btn=document.getElementById('login-btn');
+  const errBox=document.getElementById('error-msg');
+  const errTxt=document.getElementById('error-text');
+
+  errBox.classList.remove('show');
+  document.getElementById('email').classList.remove('error');
+  document.getElementById('senha').classList.remove('error');
+
+  if(!email||!senha){
+    errTxt.textContent='Preencha e-mail e senha.';
+    errBox.classList.add('show');
+    if(!email) document.getElementById('email').classList.add('error');
+    if(!senha) document.getElementById('senha').classList.add('error');
+    return;
+  }
+
+  btn.disabled=true;
+  btn.classList.add('loading');
+
+  try{
+    // 1. Autenticar via Supabase Auth
+    const res=await fetch(`${SB}/auth/v1/token?grant_type=password`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':KEY},
+      body:JSON.stringify({email,password:senha})
+    });
+    const data=await res.json();
+
+    if(!res.ok){
+      const msg=data.error_description||data.msg||'Credenciais inválidas.';
+      errTxt.textContent=msg==='Invalid login credentials'?'E-mail ou senha incorretos.':msg;
+      errBox.classList.add('show');
+      document.getElementById('email').classList.add('error');
+      document.getElementById('senha').classList.add('error');
+      return;
+    }
+
+    const token=data.access_token;
+    const userId=data.user?.id;
+
+    // 2. Verificar se o usuário está ativo no perfil
+    const perfRes=await fetch(`${SB}/rest/v1/perfis?id=eq.${userId}&select=*`,{
+      headers:{'apikey':KEY,'Authorization':`Bearer ${token}`}
+    });
+    const perfis=await perfRes.json();
+
+    if(!perfis.length){
+      errTxt.textContent='Perfil não encontrado. Contate o administrador.';
+      errBox.classList.add('show');
+      return;
+    }
+
+    const perfil=perfis[0];
+    if(!perfil.ativo){
+      errTxt.textContent='Acesso desativado. Contate o administrador.';
+      errBox.classList.add('show');
+      return;
+    }
+
+    // 3. Salvar sessão no sessionStorage
+    sessionStorage.setItem('cs_token', token);
+    sessionStorage.setItem('cs_user', JSON.stringify({
+      id:userId,
+      email:perfil.email,
+      nome:perfil.nome||email.split('@')[0],
+      is_admin:perfil.is_admin,
+      ativo:perfil.ativo
+    }));
+
+    // 4. Redirecionar
+    if(perfil.is_admin){
+      window.location.href='carteira-analise.html';
+    } else {
+      window.location.href='carteira-analise.html';
+    }
+
+  }catch(err){
+    console.error(err);
+    errTxt.textContent='Erro de conexão. Tente novamente.';
+    errBox.classList.add('show');
+  }finally{
+    btn.disabled=false;
+    btn.classList.remove('loading');
+  }
+}
+</script>
+</body>
+</html>

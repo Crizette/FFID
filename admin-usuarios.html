@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Report — Gestão de Usuários</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0D1117;--bg2:#161B22;--bg3:#1C2330;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#E6EDF3;--muted:#8B949E;--dimmed:#484F58;
+  --indigo:#4F6EF7;--indigo-dim:rgba(79,110,247,0.15);
+  --red:#EF4444;--red-dim:rgba(239,68,68,0.12);
+  --amber:#F59E0B;--amber-dim:rgba(245,158,11,0.12);
+  --green:#22C55E;--green-dim:rgba(34,197,94,0.12);
+  --radius:10px;--radius-lg:14px;
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;min-height:100vh;}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;gap:1rem;}
+.nav-logo{font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-user{font-size:13px;color:var(--muted);}
+.nav-user strong{color:var(--text);}
+.nav-btn{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;cursor:pointer;transition:all .2s;text-decoration:none;}
+.nav-btn:hover{color:var(--text);border-color:var(--border2);}
+.nav-btn.danger:hover{border-color:var(--red);color:var(--red);}
+
+/* LAYOUT */
+.wrapper{max-width:1000px;margin:0 auto;padding:0 2rem;}
+
+/* HERO */
+.page-header{padding:3rem 0 2rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem;}
+.page-eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--indigo);margin-bottom:.6rem;}
+.page-title{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.5rem;}
+.page-sub{font-size:14px;color:var(--muted);}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:2rem;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.s-total::before{background:var(--indigo);}
+.stat-card.s-ativo::before{background:var(--green);}
+.stat-card.s-inativo::before{background:var(--red);}
+.stat-card.s-admin::before{background:var(--amber);}
+.stat-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dimmed);margin-bottom:6px;}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:600;line-height:1;}
+.stat-card.s-total .stat-value{color:var(--indigo);}
+.stat-card.s-ativo .stat-value{color:var(--green);}
+.stat-card.s-inativo .stat-value{color:var(--red);}
+.stat-card.s-admin .stat-value{color:var(--amber);}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:1rem;flex-wrap:wrap;}
+.search-wrap{position:relative;flex:1;max-width:320px;}
+.search-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 12px 8px 36px;outline:none;transition:border-color .2s;}
+.search-input:focus{border-color:var(--indigo);}
+.search-input::placeholder{color:var(--dimmed);}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--dimmed);font-size:14px;pointer-events:none;}
+.invite-btn{display:inline-flex;align-items:center;gap:7px;background:var(--indigo);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:8px 18px;border-radius:var(--radius);cursor:pointer;transition:opacity .15s;white-space:nowrap;}
+.invite-btn:hover{opacity:.88;}
+
+/* TABLE */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:2rem;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--bg3);border-bottom:1px solid var(--border);}
+th{padding:11px 16px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dimmed);}
+td{padding:13px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr{transition:background .15s;}
+tr:hover td{background:rgba(255,255,255,.02);}
+tr.hidden{display:none;}
+
+.user-cell{display:flex;align-items:center;gap:10px;}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;text-transform:uppercase;}
+.avatar.admin{background:rgba(245,158,11,.15);color:#FCD34D;border:1px solid rgba(245,158,11,.25);}
+.avatar.regular{background:var(--indigo-dim);color:#A5B4FC;border:1px solid rgba(79,110,247,.2);}
+.user-name{font-weight:500;font-size:13px;}
+.user-email{font-size:11px;color:var(--dimmed);}
+
+.badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.06em;padding:3px 9px;border-radius:999px;text-transform:uppercase;white-space:nowrap;}
+.badge-green{background:var(--green-dim);color:#86EFAC;border:1px solid rgba(34,197,94,.2);}
+.badge-red{background:var(--red-dim);color:#FCA5A5;border:1px solid rgba(239,68,68,.25);}
+.badge-amber{background:var(--amber-dim);color:#FCD34D;border:1px solid rgba(245,158,11,.25);}
+.badge-gray{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border);}
+.badge-indigo{background:var(--indigo-dim);color:#A5B4FC;border:1px solid rgba(79,110,247,.25);}
+
+.actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.action-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.action-btn:hover{color:var(--text);border-color:var(--border2);}
+.action-btn.activate:hover{border-color:var(--green);color:var(--green);}
+.action-btn.deactivate:hover{border-color:var(--red);color:var(--red);}
+.action-btn.make-admin:hover{border-color:var(--amber);color:var(--amber);}
+.action-btn.remove-admin:hover{border-color:var(--dimmed);color:var(--dimmed);}
+.action-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+.empty-state{text-align:center;padding:3rem;color:var(--dimmed);font-size:14px;}
+.empty-state span{display:block;font-size:2rem;margin-bottom:8px;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;width:100%;max-width:460px;transform:translateY(12px) scale(.98);transition:transform .2s;box-shadow:0 24px 60px rgba(0,0,0,.6);}
+.modal-overlay.open .modal{transform:translateY(0) scale(1);}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+.modal-title{font-size:15px;font-weight:700;}
+.modal-close{background:none;border:none;color:var(--dimmed);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
+.modal-close:hover{color:var(--text);background:var(--bg3);}
+.modal-field{margin-bottom:1rem;}
+.modal-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dimmed);margin-bottom:5px;display:block;}
+.modal-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:9px 12px;outline:none;transition:border-color .2s;}
+.modal-input:focus{border-color:var(--indigo);}
+.modal-input::placeholder{color:var(--dimmed);}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;}
+.btn-secondary{background:var(--bg3);border:1px solid var(--border2);color:var(--muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:8px 18px;border-radius:var(--radius);cursor:pointer;}
+.btn-secondary:hover{color:var(--text);}
+.btn-primary{background:var(--indigo);border:none;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:8px 20px;border-radius:var(--radius);cursor:pointer;transition:opacity .15s;}
+.btn-primary:hover{opacity:.88;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:12px 20px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none;}
+
+/* TOGGLE */
+.toggle-wrap{display:flex;align-items:center;gap:10px;margin-top:4px;}
+.toggle{appearance:none;width:36px;height:20px;border-radius:999px;background:var(--border2);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.toggle:checked{background:var(--indigo);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;}
+.toggle:checked::after{transform:translateX(16px);}
+.toggle-label{font-size:13px;color:var(--muted);}
+
+/* LOG */
+.log-section{margin-top:2rem;}
+.log-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.log-item:last-child{border-bottom:none;}
+.log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.log-text{font-size:13px;color:var(--muted);flex:1;}
+.log-text strong{color:var(--text);}
+.log-time{font-size:11px;color:var(--dimmed);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+
+/* RESP */
+@media(max-width:640px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .toolbar{flex-direction:column;align-items:stretch;}
+  .search-wrap{max-width:100%;}
+  th:nth-child(3),td:nth-child(3){display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- INVITE MODAL -->
+<div class="modal-overlay" id="inviteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">➕ Convidar novo usuário</span>
+      <button class="modal-close" onclick="closeInvite()">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem;line-height:1.6;">O usuário receberá um e-mail de convite do Supabase para criar sua senha e acessar o sistema.</p>
+    <div class="modal-field">
+      <label class="modal-label" for="inv-nome">Nome</label>
+      <input class="modal-input" id="inv-nome" type="text" placeholder="Ex: João Silva">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label" for="inv-email">E-mail</label>
+      <input class="modal-input" id="inv-email" type="email" placeholder="joao@ffid.com.br">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label" for="inv-senha">Senha inicial</label>
+      <input class="modal-input" id="inv-senha" type="text" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="toggle-wrap" style="margin-top:.5rem">
+      <input type="checkbox" class="toggle" id="inv-admin">
+      <label class="toggle-label" for="inv-admin">Definir como administrador</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeInvite()">Cancelar</button>
+      <button class="btn-primary" id="inv-btn" onclick="inviteUser()">Criar usuário</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">CS Report — Admin</span>
+  <div class="nav-right">
+    <span class="nav-user">Logado como <strong id="nav-user-name">—</strong></span>
+    <a class="nav-btn" href="carteira-analise.html">← Voltar ao painel</a>
+    <button class="nav-btn danger" onclick="doLogout()">Sair</button>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <p class="page-eyebrow">Administração</p>
+    <h1 class="page-title">Gestão de Usuários</h1>
+    <p class="page-sub">Controle quem tem acesso ao CS Report. Apenas administradores podem visualizar esta página.</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card s-total"><p class="stat-label">Total</p><p class="stat-value" id="st-total">–</p></div>
+    <div class="stat-card s-ativo"><p class="stat-label">Ativos</p><p class="stat-value" id="st-ativo">–</p></div>
+    <div class="stat-card s-inativo"><p class="stat-label">Inativos</p><p class="stat-value" id="st-inativo">–</p></div>
+    <div class="stat-card s-admin"><p class="stat-label">Admins</p><p class="stat-value" id="st-admin">–</p></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search-input" type="text" placeholder="Buscar por nome ou e-mail..." oninput="filterUsers()">
+    </div>
+    <button class="invite-btn" onclick="openInvite()">＋ Novo usuário</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>Função</th>
+          <th>Cadastro</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="users-tbody">
+        <tr><td colspan="5"><div class="empty-state"><span>⏳</span>Carregando usuários...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- LOG DE ATIVIDADE -->
+  <div class="log-section">
+    <p style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dimmed);margin-bottom:1rem;">Log de atividades desta sessão</p>
+    <div id="activity-log" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;">
+      <p style="font-size:13px;color:var(--dimmed);text-align:center;padding:.5rem 0;">Nenhuma ação realizada nesta sessão.</p>
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<script>
+const SB  = 'https://osezvncticxwgaksouqp.supabase.co';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zZXp2bmN0aWN4d2dha3NvdXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1OTQ3MTcsImV4cCI6MjA5NzE3MDcxN30.Hk3TjCW0Xh92Akzkz6BFoe7SGuKfnNJ1GbQziXl7w7o';
+
+// ── AUTH GUARD ──
+const session = JSON.parse(sessionStorage.getItem('cs_user')||'null');
+const token   = sessionStorage.getItem('cs_token');
+
+if(!session||!token){
+  window.location.href='login.html';
+}
+if(!session?.is_admin){
+  alert('Acesso restrito. Apenas administradores podem acessar esta página.');
+  window.location.href='carteira-analise.html';
+}
+
+const H = {'Content-Type':'application/json','apikey':KEY,'Authorization':`Bearer ${token}`};
+
+document.getElementById('nav-user-name').textContent = session.nome||session.email;
+
+// ── STATE ──
+let allUsers = [];
+let actLog   = [];
+
+// ── HELPERS ──
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function formatDate(iso){
+  if(!iso) return '—';
+  const d=new Date(iso);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+function showToast(msg, type='success'){
+  let t=document.querySelector('.toast');
+  if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;
+    background:${type==='error'?'#3B1212':'#0F2A1A'};
+    border:1px solid ${type==='error'?'rgba(239,68,68,.4)':'rgba(34,197,94,.35)'};
+    color:${type==='error'?'#FCA5A5':'#86EFAC'};
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:500;
+    padding:12px 20px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);
+    opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none;`;
+  requestAnimationFrame(()=>{t.style.opacity='1';t.style.transform='translateY(0)';});
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';},3000);
+}
+
+function logActivity(msg, color='var(--indigo)'){
+  actLog.unshift({msg, time:new Date(), color});
+  renderLog();
+}
+
+function renderLog(){
+  const el=document.getElementById('activity-log');
+  if(!actLog.length){el.innerHTML='<p style="font-size:13px;color:var(--dimmed);text-align:center;padding:.5rem 0;">Nenhuma ação realizada.</p>';return;}
+  el.innerHTML=actLog.slice(0,20).map(l=>`
+    <div class="log-item">
+      <div class="log-dot" style="background:${l.color}"></div>
+      <p class="log-text">${l.msg}</p>
+      <span class="log-time">${l.time.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+    </div>`).join('');
+}
+
+function initials(nome,email){
+  const n=nome||email||'?';
+  return n.trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+}
+
+// ── LOAD USERS ──
+async function loadUsers(){
+  try{
+    const r=await fetch(`${SB}/rest/v1/perfis?select=*&order=created_at.asc`,{headers:H});
+    if(!r.ok) throw new Error(`${r.status}`);
+    allUsers=await r.json();
+    renderUsers(allUsers);
+    renderStats(allUsers);
+  }catch(err){
+    console.error(err);
+    document.getElementById('users-tbody').innerHTML=
+      `<tr><td colspan="5"><div class="empty-state"><span>⚠️</span>Erro ao carregar: ${err.message}</div></td></tr>`;
+  }
+}
+
+function renderStats(users){
+  document.getElementById('st-total').textContent  = users.length;
+  document.getElementById('st-ativo').textContent  = users.filter(u=>u.ativo).length;
+  document.getElementById('st-inativo').textContent= users.filter(u=>!u.ativo).length;
+  document.getElementById('st-admin').textContent  = users.filter(u=>u.is_admin).length;
+}
+
+function renderUsers(users){
+  const tbody=document.getElementById('users-tbody');
+  if(!users.length){
+    tbody.innerHTML='<tr><td colspan="5"><div class="empty-state"><span>👥</span>Nenhum usuário encontrado.</div></td></tr>';
+    return;
+  }
+  const me = session.id;
+  tbody.innerHTML=users.map(u=>{
+    const isSelf = u.id===me;
+    const isAdminUser = u.email==='crizette@ffid.com.br'; // superadmin protegido
+    const avCls = u.is_admin?'admin':'regular';
+    return `<tr id="row-${u.id}">
+      <td>
+        <div class="user-cell">
+          <div class="avatar ${avCls}">${initials(u.nome,u.email)}</div>
+          <div>
+            <p class="user-name">${esc(u.nome||'—')} ${isSelf?'<span style="font-size:10px;color:var(--dimmed)">(você)</span>':''}</p>
+            <p class="user-email">${esc(u.email)}</p>
+          </div>
+        </div>
+      </td>
+      <td>
+        ${u.is_admin
+          ? `<span class="badge badge-amber">⭐ Admin</span>`
+          : `<span class="badge badge-gray">Usuário</span>`}
+      </td>
+      <td style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace">${formatDate(u.created_at)}</td>
+      <td>
+        ${u.ativo
+          ? '<span class="badge badge-green">● Ativo</span>'
+          : '<span class="badge badge-red">● Inativo</span>'}
+      </td>
+      <td>
+        <div class="actions">
+          ${!isAdminUser && !isSelf ? (u.ativo
+            ? `<button class="action-btn deactivate" onclick="toggleAtivo('${u.id}','${esc(u.nome||u.email)}',false)">Desativar</button>`
+            : `<button class="action-btn activate"   onclick="toggleAtivo('${u.id}','${esc(u.nome||u.email)}',true)">Ativar</button>`)
+          : ''}
+          ${!isAdminUser && !isSelf ? (u.is_admin
+            ? `<button class="action-btn remove-admin" onclick="toggleAdmin('${u.id}','${esc(u.nome||u.email)}',false)">Remover admin</button>`
+            : `<button class="action-btn make-admin"   onclick="toggleAdmin('${u.id}','${esc(u.nome||u.email)}',true)">Tornar admin</button>`)
+          : ''}
+          ${isAdminUser ? '<span style="font-size:11px;color:var(--dimmed)">— superadmin —</span>' : ''}
+          ${isSelf && !isAdminUser ? '<span style="font-size:11px;color:var(--dimmed)">— você —</span>' : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterUsers(){
+  const q=document.getElementById('search-input').value.toLowerCase();
+  const filtered=allUsers.filter(u=>
+    (u.nome||'').toLowerCase().includes(q)||
+    (u.email||'').toLowerCase().includes(q)
+  );
+  renderUsers(filtered);
+}
+
+// ── ACTIONS ──
+async function toggleAtivo(id, nome, ativo){
+  try{
+    const r=await fetch(`${SB}/rest/v1/perfis?id=eq.${id}`,{
+      method:'PATCH',
+      headers:{...H,'Prefer':'return=minimal'},
+      body:JSON.stringify({ativo})
+    });
+    if(!r.ok) throw new Error(`${r.status}`);
+    const u=allUsers.find(x=>x.id===id);
+    if(u) u.ativo=ativo;
+    renderUsers(allUsers);
+    renderStats(allUsers);
+    const action=ativo?'ativado':'desativado';
+    showToast(`${nome} ${action} com sucesso.`);
+    logActivity(`<strong>${esc(nome)}</strong> foi <strong>${action}</strong> por ${session.nome}`,ativo?'var(--green)':'var(--red)');
+  }catch(err){
+    showToast(`Erro: ${err.message}`,'error');
+  }
+}
+
+async function toggleAdmin(id, nome, isAdmin){
+  if(isAdmin && !confirm(`Dar permissão de administrador para "${nome}"? Ele poderá acessar e modificar tudo, incluindo outros usuários.`)) return;
+  try{
+    const r=await fetch(`${SB}/rest/v1/perfis?id=eq.${id}`,{
+      method:'PATCH',
+      headers:{...H,'Prefer':'return=minimal'},
+      body:JSON.stringify({is_admin:isAdmin})
+    });
+    if(!r.ok) throw new Error(`${r.status}`);
+    const u=allUsers.find(x=>x.id===id);
+    if(u) u.is_admin=isAdmin;
+    renderUsers(allUsers);
+    renderStats(allUsers);
+    const action=isAdmin?'promovido a admin':'removido do admin';
+    showToast(`${nome} ${action}.`);
+    logActivity(`<strong>${esc(nome)}</strong> foi <strong>${action}</strong> por ${session.nome}`, 'var(--amber)');
+  }catch(err){
+    showToast(`Erro: ${err.message}`,'error');
+  }
+}
+
+// ── INVITE ──
+function openInvite(){
+  document.getElementById('inv-nome').value='';
+  document.getElementById('inv-email').value='';
+  document.getElementById('inv-senha').value='';
+  document.getElementById('inv-admin').checked=false;
+  document.getElementById('inviteModal').classList.add('open');
+}
+function closeInvite(){
+  document.getElementById('inviteModal').classList.remove('open');
+}
+document.getElementById('inviteModal').addEventListener('click',e=>{
+  if(e.target===document.getElementById('inviteModal')) closeInvite();
+});
+
+async function inviteUser(){
+  const nome  = document.getElementById('inv-nome').value.trim();
+  const email = document.getElementById('inv-email').value.trim();
+  const senha = document.getElementById('inv-senha').value.trim();
+  const isAdm = document.getElementById('inv-admin').checked;
+
+  if(!email||!senha){showToast('Preencha e-mail e senha.','error');return;}
+  if(senha.length<6){showToast('Senha deve ter mínimo 6 caracteres.','error');return;}
+
+  const btn=document.getElementById('inv-btn');
+  btn.disabled=true;btn.textContent='Criando...';
+
+  try{
+    // 1. Criar usuário via Supabase Auth (signup)
+    const signRes=await fetch(`${SB}/auth/v1/admin/users`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':KEY,
+        'Authorization':`Bearer ${token}`
+      },
+      body:JSON.stringify({
+        email,
+        password:senha,
+        email_confirm:true,
+        user_metadata:{nome}
+      })
+    });
+
+    if(!signRes.ok){
+      // Fallback: signup normal (sem admin API)
+      const signRes2=await fetch(`${SB}/auth/v1/signup`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':KEY},
+        body:JSON.stringify({email,password:senha,data:{nome}})
+      });
+      const d2=await signRes2.json();
+      if(!signRes2.ok) throw new Error(d2.msg||d2.error_description||`${signRes2.status}`);
+      const uid=d2.user?.id||d2.id;
+      if(uid) await upsertPerfil(uid,email,nome,isAdm);
+    } else {
+      const d=await signRes.json();
+      const uid=d.id||d.user?.id;
+      if(uid) await upsertPerfil(uid,email,nome,isAdm);
+    }
+
+    showToast(`✓ Usuário ${email} criado com sucesso!`);
+    logActivity(`Novo usuário <strong>${esc(nome||email)}</strong> criado por ${session.nome}`, 'var(--indigo)');
+    closeInvite();
+    await loadUsers();
+  }catch(err){
+    console.error(err);
+    showToast(`Erro: ${err.message}`,'error');
+  }finally{
+    btn.disabled=false;btn.textContent='Criar usuário';
+  }
+}
+
+async function upsertPerfil(uid,email,nome,isAdmin){
+  await fetch(`${SB}/rest/v1/perfis`,{
+    method:'POST',
+    headers:{...H,'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({id:uid,email,nome:nome||email.split('@')[0],is_admin:isAdmin,ativo:true})
+  });
+}
+
+// ── LOGOUT ──
+function doLogout(){
+  sessionStorage.removeItem('cs_token');
+  sessionStorage.removeItem('cs_user');
+  window.location.href='login.html';
+}
+
+// ── INIT ──
+loadUsers();
+</script>
+</body>
+</html>
